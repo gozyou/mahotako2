@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>恋愛診断</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Hiragino Kana Gothic ProN', 'Noto Sans JP', sans-serif;
+    background: linear-gradient(135deg, #fdf4ff 0%, #fce7f3 40%, #eff6ff 100%);
+    min-height: 100vh;
+    color: #2d1a4a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .screen { display: none; width: 100%; max-width: 440px; padding: 24px 20px; }
+  .screen.active { display: block; }
+  .top-wrap { text-align: center; padding-top: 40px; }
+  .top-logo { font-size: 56px; margin-bottom: 8px; }
+  .top-title { font-size: 24px; font-weight: 800; letter-spacing: 2px; color: #7c3aed; margin-bottom: 6px; }
+  .top-sub { font-size: 13px; color: #a78bca; margin-bottom: 36px; }
+  .dino-row { display: flex; justify-content: center; gap: 14px; margin-bottom: 36px; font-size: 38px; }
+  .start-btn {
+    display: block;
+    width: 100%;
+    background: linear-gradient(135deg, #7c3aed, #c026d3);
+    color: #fff;
+    border: none;
+    border-radius: 50px;
+    padding: 18px;
+    font-size: 17px;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 1px;
+    box-shadow: 0 6px 24px rgba(124,58,237,0.35);
+    transition: transform .15s, box-shadow .15s;
+  }
+  .start-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 32px rgba(124,58,237,0.45); }
+  .quiz-inner { background: #fff; border-radius: 28px; padding: 24px 20px; box-shadow: 0 8px 40px rgba(124,58,237,0.1); }
+  .progress-bar-wrap { margin-bottom: 18px; }
+  .progress-label { display: flex; justify-content: space-between; font-size: 12px; color: #a78bca; margin-bottom: 6px; font-weight: 600; }
+  .progress-bar { height: 8px; background: #ede9fe; border-radius: 99px; overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, #7c3aed, #ec4899); border-radius: 99px; transition: width .4s ease; }
+  .q-num { font-size: 11px; color: #c084fc; font-weight: 700; letter-spacing: 2px; margin-bottom: 8px; text-transform: uppercase; }
+  .q-text { font-size: 17px; font-weight: 700; line-height: 1.65; margin-bottom: 22px; color: #1e1040; }
+  .choices { display: flex; flex-direction: column; gap: 10px; margin-bottom: 22px; }
+  .choice-btn {
+    background: #faf5ff;
+    border: 2px solid #e9d5ff;
+    border-radius: 16px;
+    padding: 14px 16px;
+    color: #3b1a6e;
+    font-size: 14px;
+    text-align: left;
+    cursor: pointer;
+    transition: all .18s;
+    line-height: 1.5;
+    font-weight: 500;
+  }
+  .choice-btn:hover { background: #f3e8ff; border-color: #a855f7; transform: translateX(4px); color: #6b21a8; }
+  .live-params { background: #fdf4ff; border-radius: 18px; padding: 16px; border: 1.5px solid #e9d5ff; }
+  .live-params-title { font-size: 11px; color: #a78bca; font-weight: 700; letter-spacing: 1px; margin-bottom: 12px; }
+  .param-row { display: flex; align-items: center; gap: 10px; margin-bottom: 9px; }
+  .param-row:last-child { margin-bottom: 0; }
+  .param-label { font-size: 12px; color: #6b21a8; width: 38px; text-align: right; font-weight: 600; }
+  .param-bar-wrap { flex: 1; height: 8px; background: #ede9fe; border-radius: 99px; overflow: hidden; }
+  .param-bar { height: 100%; border-radius: 99px; transition: width .6s cubic-bezier(.34,1.56,.64,1); }
+  .param-val { font-size: 11px; color: #a78bca; width: 22px; text-align: right; font-weight: 700; }
+  .result-wrap { text-align: center; }
+  .result-card-top {
+    background: #fff;
+    border-radius: 28px;
+    padding: 28px 24px 20px;
+    box-shadow: 0 8px 40px rgba(124,58,237,0.12);
+    margin-bottom: 16px;
+  }
+  .result-label { font-size: 11px; color: #c084fc; letter-spacing: 2px; font-weight: 700; margin-bottom: 10px; text-transform: uppercase; }
+  .result-visual { width: min(100%, 248px); margin: 10px auto 18px; }
+  .result-portrait-shell {
+    position: relative;
+    padding: 18px;
+    border-radius: 32px;
+    background: linear-gradient(145deg, var(--shell-start, #fbf4ff), var(--shell-end, #eef7ff));
+    box-shadow: 0 16px 38px rgba(124,58,237,0.14);
+    overflow: hidden;
+    isolation: isolate;
+  }
+  .result-portrait-shell::before {
+    content: "";
+    position: absolute;
+    width: 180px;
+    height: 180px;
+    right: -34px;
+    bottom: -72px;
+    border-radius: 50%;
+    background: radial-gradient(circle, color-mix(in srgb, var(--shell-glow, #7c3aed) 32%, white) 0%, rgba(255,255,255,0) 70%);
+    opacity: .95;
+    z-index: -1;
+  }
+  .result-portrait {
+    display: block;
+    width: 100%;
+    max-width: 212px;
+    margin: 0 auto;
+    filter: drop-shadow(0 10px 20px rgba(59,7,100,0.16));
+  }
+  .result-emoji {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    width: 40px;
+    height: 40px;
+    border-radius: 999px;
+    display: grid;
+    place-items: center;
+    background: rgba(255,255,255,0.9);
+    box-shadow: 0 8px 22px rgba(59,7,100,0.14);
+    font-size: 22px;
+  }
+  .result-name { font-size: 30px; font-weight: 800; margin-bottom: 6px; color: #3b0764; }
+  .result-dino { font-size: 13px; color: #a78bca; margin-bottom: 14px; font-weight: 500; }
+  .result-copy { font-size: 14px; color: #4c1d95; line-height: 1.8; white-space: pre-line; }
+  .result-params-card,
+  .result-cast-card {
+    background: #fff;
+    border-radius: 20px;
+    padding: 18px;
+    box-shadow: 0 4px 20px rgba(124,58,237,0.08);
+    margin-bottom: 18px;
+  }
+  .result-params-title { font-size: 11px; color: #a78bca; font-weight: 700; letter-spacing: 1px; margin-bottom: 14px; }
+  .character-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    text-align: left;
+  }
+  .character-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    border-radius: 18px;
+    background: #fcfaff;
+    border: 1.5px solid #eee4ff;
+    transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+  }
+  .character-card.active {
+    border-color: var(--char-accent, #7c3aed);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 24px rgba(124,58,237,0.12);
+  }
+  .character-thumb {
+    width: 68px;
+    height: 68px;
+    object-fit: cover;
+    border-radius: 18px;
+    background: linear-gradient(145deg, #fff, #f4ecff);
+    flex-shrink: 0;
+  }
+  .character-meta { min-width: 0; }
+  .character-name { font-size: 14px; font-weight: 800; color: #2b144b; margin-bottom: 3px; }
+  .character-type { font-size: 11px; color: #9a7cc5; margin-bottom: 4px; }
+  .character-tag { font-size: 12px; color: #55308d; line-height: 1.45; }
+  .cta-btn {
+    display: block;
+    width: 100%;
+    background: linear-gradient(135deg, #059669, #10b981);
+    color: #fff;
+    border: none;
+    border-radius: 50px;
+    padding: 18px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 1px;
+    box-shadow: 0 4px 24px rgba(16,185,129,0.35);
+    margin-bottom: 12px;
+    transition: transform .15s;
+  }
+  .cta-btn:hover { transform: translateY(-2px); }
+  .retry-btn {
+    background: none;
+    border: 2px solid #e9d5ff;
+    color: #a78bca;
+    border-radius: 50px;
+    padding: 12px;
+    width: 100%;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all .15s;
+    font-weight: 600;
+  }
+  .retry-btn:hover { border-color: #a855f7; color: #7c3aed; }
+  @media (max-width: 480px) {
+    body { align-items: flex-start; padding: 16px 0; }
+    .screen { padding: 16px; }
+    .top-title { font-size: 22px; }
+    .result-name { font-size: 26px; }
+    .character-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="screen active" id="screen-top">
+  <div class="top-wrap">
+    <div class="top-logo">🦕</div>
+    <div class="top-title">恋愛タイプ診断</div>
+    <div class="top-sub">あなたの恋愛キャラを見つけよう</div>
+    <div class="dino-row">
+      <span title="レオヴァン">🔥</span>
+      <span title="フォクシア">🌙</span>
+      <span title="ベル">💛</span>
+      <span title="ルナミィ">💜</span>
+      <span title="セレフィア">❄️</span>
+    </div>
+    <button class="start-btn" onclick="startQuiz()">診断スタート ▶</button>
+  </div>
+</div>
+<div class="screen" id="screen-quiz">
+  <div class="quiz-inner">
+    <div class="progress-bar-wrap">
+      <div class="progress-label">
+        <span id="prog-text">Q1 / 10</span>
+        <span id="prog-pct">0%</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" id="prog-fill" style="width:0%"></div></div>
+    </div>
+    <div class="q-num" id="q-num">QUESTION 01</div>
+    <div class="q-text" id="q-text"></div>
+    <div class="choices" id="choices"></div>
+    <div class="live-params">
+      <div class="live-params-title">🔍 あなたのパラメーター</div>
+      <div id="live-param-bars"></div>
+    </div>
+  </div>
+</div>
+<div class="screen" id="screen-result">
+  <div class="result-wrap">
+    <div class="result-card-top">
+      <div class="result-label">あなたの恋愛タイプは…</div>
+      <div class="result-visual">
+        <div class="result-portrait-shell" id="r-shell">
+          <div class="result-emoji" id="r-emoji"></div>
+          <img class="result-portrait" id="r-portrait" alt="">
+        </div>
+      </div>
+      <div class="result-name" id="r-name"></div>
+      <div class="result-dino" id="r-dino"></div>
+      <div class="result-copy" id="r-copy"></div>
+    </div>
+    <div class="result-params-card">
+      <div class="result-params-title">📊 あなたの恋愛パラメーター</div>
+      <div id="r-params"></div>
+    </div>
+    <div class="result-cast-card">
+      <div class="result-params-title">🦕 登場キャラクター</div>
+      <div class="character-grid" id="character-gallery"></div>
+    </div>
+    <button class="cta-btn" id="cta-btn">LINEで詳しい性格を確認！ 💬</button>
+    <button class="retry-btn" onclick="resetQuiz()">もう一度診断する</button>
+  </div>
+</div>
+<script>
+const QUESTIONS = [
+  {
+    text: "好きな人ができたとき、あなたはどうする？",
+    choices: [
+      { text: "すぐ話しかける。気持ちは行動で示す！", scores: { 情熱: 3, 知性: 0, 愛情: 1, 自由: 1, 安定: 0 }, chars: { レオヴァン: 3, フォクシア: 0, ベル: 1, ルナミィ: 1, セレフィア: 0 } },
+      { text: "まずは相手のことをじっくり観察する", scores: { 情熱: 0, 知性: 3, 愛情: 1, 自由: 1, 安定: 1 }, chars: { レオヴァン: 0, フォクシア: 3, ベル: 0, ルナミィ: 1, セレフィア: 1 } },
+      { text: "さりげなく気にかけて、信頼を積み重ねる", scores: { 情熱: 1, 知性: 1, 愛情: 3, 自由: 0, 安定: 2 }, chars: { レオヴァン: 0, フォクシア: 1, ベル: 3, ルナミィ: 0, セレフィア: 2 } }
+    ]
+  },
+  {
+    text: "デートに誘うなら、どのシチュエーション？",
+    choices: [
+      { text: "遊園地！テンション上げて楽しもう", scores: { 情熱: 3, 知性: 0, 愛情: 1, 自由: 2, 安定: 0 }, chars: { レオヴァン: 3, フォクシア: 0, ベル: 1, ルナミィ: 2, セレフィア: 0 } },
+      { text: "静かなカフェでゆっくり話したい", scores: { 情熱: 0, 知性: 2, 愛情: 2, 自由: 0, 安定: 3 }, chars: { レオヴァン: 0, フォクシア: 2, ベル: 2, ルナミィ: 0, セレフィア: 3 } },
+      { text: "ふらっと散歩、気の向くままに", scores: { 情熱: 1, 知性: 1, 愛情: 1, 自由: 3, 安定: 1 }, chars: { レオヴァン: 0, フォクシア: 1, ベル: 1, ルナミィ: 3, セレフィア: 1 } }
+    ]
+  },
+  {
+    text: "好きな人が落ち込んでいたら？",
+    choices: [
+      { text: "「一緒に乗り越えよう！」と熱く励ます", scores: { 情熱: 3, 知性: 0, 愛情: 2, 自由: 0, 安定: 0 }, chars: { レオヴァン: 3, フォクシア: 0, ベル: 2, ルナミィ: 0, セレフィア: 0 } },
+      { text: "そっと隣にいて、話を聞いてあげる", scores: { 情熱: 0, 知性: 1, 愛情: 3, 自由: 0, 安定: 2 }, chars: { レオヴァン: 0, フォクシア: 1, ベル: 3, ルナミィ: 0, セレフィア: 2 } },
+      { text: "原因を分析して、解決策を一緒に考える", scores: { 情熱: 1, 知性: 3, 愛情: 1, 自由: 1, 安定: 1 }, chars: { レオヴァン: 0, フォクシア: 3, ベル: 1, ルナミィ: 1, セレフィア: 1 } }
+    ]
+  },
+  {
+    text: "恋愛において一番大切にしていることは？",
+    choices: [
+      { text: "情熱と勢い。熱い気持ちが全て", scores: { 情熱: 3, 知性: 0, 愛情: 1, 自由: 1, 安定: 0 }, chars: { レオヴァン: 3, フォクシア: 0, ベル: 0, ルナミィ: 1, セレフィア: 0 } },
+      { text: "誠実さと思いやり。相手を大切にしたい", scores: { 情熱: 0, 知性: 1, 愛情: 3, 自由: 0, 安定: 2 }, chars: { レオヴァン: 0, フォクシア: 0, ベル: 3, ルナミィ: 0, セレフィア: 2 } },
+      { text: "お互いの自由を尊重すること", scores: { 情熱: 0, 知性: 2, 愛情: 0, 自由: 3, 安定: 1 }, chars: { レオヴァン: 0, フォクシア: 2, ベル: 0, ルナミィ: 3, セレフィア: 1 } }
+    ]
+  },
+  {
+    text: "連絡のペースはどのくらいが理想？",
+    choices: [
+      { text: "毎日！できれば常につながっていたい", scores: { 情熱: 3, 知性: 0, 愛情: 2, 自由: 0, 安定: 1 }, chars: { レオヴァン: 3, フォクシア: 0, ベル: 2, ルナミィ: 0, セレフィア: 0 } },
+      { text: "適度に。用があるときにサクッと連絡", scores: { 情熱: 0, 知性: 2, 愛情: 0, 自由: 3, 安定: 1 }, chars: { レオヴァン: 0, フォクシア: 1, ベル: 0, ルナミィ: 3, セレフィア: 1 } },
+      { text: "毎日じゃなくてもいい。でも丁寧に", scores: { 情熱: 1, 知性: 1, 愛情: 2, 自由: 1, 安定: 3 }, chars: { レオヴァン: 0, フォクシア: 2, ベル: 2, ルナミィ: 0, セレフィア: 3 } }
+    ]
+  },
+  {
+    text: "相手に不満があるとき、あなたは？",
+    choices: [
+      { text: "すぐ言う。溜め込むのが嫌いだから", scores: { 情熱: 3, 知性: 0, 愛情: 1, 自由: 1, 安定: 0 }, chars: { レオヴァン: 3, フォクシア: 0, ベル: 0, ルナミィ: 1, セレフィア: 0 } },
+      { text: "タイミングを見計らって、冷静に話し合う", scores: { 情熱: 0, 知性: 3, 愛情: 1, 自由: 0, 安定: 2 }, chars: { レオヴァン: 0, フォクシア: 3, ベル: 0, ルナミィ: 0, セレフィア: 2 } },
+      { text: "なるべく穏やかに、傷つけないように伝える", scores: { 情熱: 0, 知性: 1, 愛情: 3, 自由: 0, 安定: 1 }, chars: { レオヴァン: 0, フォクシア: 1, ベル: 3, ルナミィ: 0, セレフィア: 1 } }
+    ]
+  },
+  {
+    text: "理想のカップルのあり方は？",
+    choices: [
+      { text: "いつも一緒！何でも共有したい", scores: { 情熱: 3, 知性: 0, 愛情: 2, 自由: 0, 安定: 1 }, chars: { レオヴァン: 3, フォクシア: 0, ベル: 2, ルナミィ: 0, セレフィア: 0 } },
+      { text: "お互い自立した大人の関係", scores: { 情熱: 0, 知性: 2, 愛情: 0, 自由: 3, 安定: 1 }, chars: { レオヴァン: 0, フォクシア: 2, ベル: 0, ルナミィ: 3, セレフィア: 1 } },
+      { text: "穏やかで、安心できる関係", scores: { 情熱: 0, 知性: 1, 愛情: 2, 自由: 0, 安定: 3 }, chars: { レオヴァン: 0, フォクシア: 0, ベル: 2, ルナミィ: 0, セレフィア: 3 } }
+    ]
+  },
+  {
+    text: "休日、恋人と過ごすなら？",
+    choices: [
+      { text: "アクティブに！外に出てアドベンチャー", scores: { 情熱: 3, 知性: 0, 愛情: 1, 自由: 2, 安定: 0 }, chars: { レオヴァン: 3, フォクシア: 0, ベル: 0, ルナミィ: 2, セレフィア: 0 } },
+      { text: "家でまったり。映画や料理を楽しむ", scores: { 情熱: 0, 知性: 1, 愛情: 3, 自由: 0, 安定: 2 }, chars: { レオヴァン: 0, フォクシア: 0, ベル: 3, ルナミィ: 0, セレフィア: 2 } },
+      { text: "それぞれの時間を大切に。夜だけ合流", scores: { 情熱: 0, 知性: 2, 愛情: 0, 自由: 3, 安定: 1 }, chars: { レオヴァン: 0, フォクシア: 2, ベル: 0, ルナミィ: 3, セレフィア: 1 } }
+    ]
+  },
+  {
+    text: "告白するなら、どのタイミング？",
+    choices: [
+      { text: "気持ちが固まったら即！勢いが大事", scores: { 情熱: 3, 知性: 0, 愛情: 0, 自由: 2, 安定: 0 }, chars: { レオヴァン: 3, フォクシア: 0, ベル: 0, ルナミィ: 2, セレフィア: 0 } },
+      { text: "相手の気持ちをしっかり見極めてから", scores: { 情熱: 0, 知性: 3, 愛情: 1, 自由: 0, 安定: 1 }, chars: { レオヴァン: 0, フォクシア: 3, ベル: 1, ルナミィ: 0, セレフィア: 1 } },
+      { text: "特別な日に、丁寧な雰囲気の中で", scores: { 情熱: 1, 知性: 0, 愛情: 2, 自由: 0, 安定: 3 }, chars: { レオヴァン: 0, フォクシア: 0, ベル: 2, ルナミィ: 0, セレフィア: 3 } }
+    ]
+  },
+  {
+    text: "恋愛で一番怖いことは？",
+    choices: [
+      { text: "情熱が冷めてしまうこと", scores: { 情熱: 3, 知性: 0, 愛情: 1, 自由: 1, 安定: 0 }, chars: { レオヴァン: 3, フォクシア: 0, ベル: 0, ルナミィ: 1, セレフィア: 0 } },
+      { text: "束縛されて自分を失うこと", scores: { 情熱: 0, 知性: 1, 愛情: 0, 自由: 3, 安定: 0 }, chars: { レオヴァン: 0, フォクシア: 1, ベル: 0, ルナミィ: 3, セレフィア: 0 } },
+      { text: "信頼関係が壊れること", scores: { 情熱: 0, 知性: 2, 愛情: 2, 自由: 0, 安定: 3 }, chars: { レオヴァン: 0, フォクシア: 1, ベル: 2, ルナミィ: 0, セレフィア: 3 } }
+    ]
+  }
+];
+
+const CHARS = {
+  レオヴァン: {
+    emoji: "🔥",
+    dino: "熱血直進型",
+    copy: "情熱と直球が武器の、熱血王子タイプ。\n好きになったら真っすぐ突き進む！",
+    tag: "灼冠のプリンス",
+    accent: "#ff7a18",
+    shellStart: "#fff1df",
+    shellEnd: "#ffe1d2",
+    images: ["./leovan.png", "./assets/leovan.png"]
+  },
+  フォクシア: {
+    emoji: "🌙",
+    dino: "冷静観察型",
+    copy: "観察力と知性で相手を見極める、月明かりの策士。\n感情より論理、でも芯は熱い。",
+    tag: "月影のアナリスト",
+    accent: "#5867c9",
+    shellStart: "#eef0ff",
+    shellEnd: "#dde7ff",
+    images: ["./foxia.png", "./assets/foxia.png"]
+  },
+  ベル: {
+    emoji: "💛",
+    dino: "包容癒し型",
+    copy: "温かさと誠実さで包み込む、愛情深い癒しタイプ。\nあなたのそばにいるだけで、安心感が生まれる。",
+    tag: "ぬくもりの守護者",
+    accent: "#d08a54",
+    shellStart: "#fff5df",
+    shellEnd: "#ffe8cf",
+    images: ["./belle.png", "./assets/belle.png"]
+  },
+  ルナミィ: {
+    emoji: "💜",
+    dino: "自由奔放型",
+    copy: "自由と気まぐれが魅力の、夜空の一匹狼。\n距離感が絶妙で、追いかけたくなる存在。",
+    tag: "宵風のトリックスター",
+    accent: "#7a5ce3",
+    shellStart: "#f1e9ff",
+    shellEnd: "#e3e8ff",
+    images: ["./lunamii.png", "./assets/lunamii.png"]
+  },
+  セレフィア: {
+    emoji: "❄️",
+    dino: "気品安定型",
+    copy: "落ち着きと品格を纏う、静かなる女王。\n安定した関係の中に、深い愛情を宿している。",
+    tag: "氷光のレディ",
+    accent: "#6db4ef",
+    shellStart: "#f3f9ff",
+    shellEnd: "#e7efff",
+    images: ["./selephia.png", "./assets/selephia.png"]
+  }
+};
+
+const PARAM_LABELS = ["情熱", "知性", "愛情", "自由", "安定"];
+const PARAM_COLORS = { 情熱: "#ef4444", 知性: "#6366f1", 愛情: "#ec4899", 自由: "#8b5cf6", 安定: "#0ea5e9" };
+const MAX_PARAM = 30;
+const LINE_URL = "https://line.me/";
+
+let current = 0;
+let charScores = {};
+let paramScores = {};
+
+function initScores() {
+  charScores = {};
+  paramScores = {};
+  Object.keys(CHARS).forEach((key) => { charScores[key] = 0; });
+  PARAM_LABELS.forEach((key) => { paramScores[key] = 0; });
+}
+
+function show(id) {
+  document.querySelectorAll(".screen").forEach((screen) => screen.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+}
+
+function startQuiz() {
+  current = 0;
+  initScores();
+  renderLiveParams();
+  show("screen-quiz");
+  renderQ();
+}
+
+function renderQ() {
+  const q = QUESTIONS[current];
+  const pct = Math.round((current / QUESTIONS.length) * 100);
+  document.getElementById("prog-text").textContent = `Q${current + 1} / ${QUESTIONS.length}`;
+  document.getElementById("prog-pct").textContent = `${pct}%`;
+  document.getElementById("prog-fill").style.width = `${pct}%`;
+  document.getElementById("q-num").textContent = `QUESTION ${String(current + 1).padStart(2, "0")}`;
+  document.getElementById("q-text").textContent = q.text;
+
+  const wrap = document.getElementById("choices");
+  wrap.innerHTML = "";
+  q.choices.forEach((choice, index) => {
+    const btn = document.createElement("button");
+    btn.className = "choice-btn";
+    btn.type = "button";
+    btn.textContent = choice.text;
+    btn.onclick = () => selectChoice(index);
+    wrap.appendChild(btn);
+  });
+}
+
+function renderLiveParams() {
+  const wrap = document.getElementById("live-param-bars");
+  wrap.innerHTML = PARAM_LABELS.map((key) => `
+    <div class="param-row">
+      <div class="param-label">${key}</div>
+      <div class="param-bar-wrap">
+        <div class="param-bar" id="pbar-${key}" style="width:0%;background:${PARAM_COLORS[key]}"></div>
+      </div>
+      <div class="param-val" id="pval-${key}">0</div>
+    </div>
+  `).join("");
+}
+
+function updateLiveParams() {
+  PARAM_LABELS.forEach((key) => {
+    const pct = Math.min(100, Math.round((paramScores[key] / MAX_PARAM) * 100));
+    const bar = document.getElementById(`pbar-${key}`);
+    const val = document.getElementById(`pval-${key}`);
+    if (bar) bar.style.width = `${pct}%`;
+    if (val) val.textContent = paramScores[key];
+  });
+}
+
+function createPortraitDataUrl(charName) {
+  const ch = CHARS[charName];
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 280">
+      <defs>
+        <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="${ch.shellStart}"/>
+          <stop offset="100%" stop-color="${ch.shellEnd}"/>
+        </linearGradient>
+      </defs>
+      <rect width="280" height="280" rx="42" fill="url(#bg)"/>
+      <circle cx="140" cy="112" r="78" fill="rgba(255,255,255,0.9)"/>
+      <circle cx="214" cy="62" r="12" fill="${ch.accent}" opacity="0.28"/>
+      <circle cx="62" cy="204" r="16" fill="${ch.accent}" opacity="0.16"/>
+      <text x="140" y="135" text-anchor="middle" font-size="88">${ch.emoji}</text>
+      <text x="140" y="213" text-anchor="middle" font-size="24" font-weight="700" fill="#3b0764">${charName}</text>
+      <text x="140" y="240" text-anchor="middle" font-size="15" fill="#7c5ba4">${ch.tag}</text>
+    </svg>
+  `;
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+}
+
+function setCharacterImage(img, charName) {
+  const ch = CHARS[charName];
+  const fallback = createPortraitDataUrl(charName);
+  const candidates = [...(ch.images || []), ch.image].filter(Boolean);
+  let index = 0;
+  img.alt = `${charName} portrait`;
+  img.onerror = () => {
+    if (index < candidates.length - 1) {
+      index += 1;
+      img.src = candidates[index];
+      return;
+    }
+    img.onerror = null;
+    img.src = fallback;
+  };
+  img.src = candidates[0] || fallback;
+}
+
+function renderCharacterGallery(winner) {
+  const wrap = document.getElementById("character-gallery");
+  wrap.innerHTML = "";
+  Object.entries(CHARS).forEach(([name, ch]) => {
+    const card = document.createElement("div");
+    card.className = `character-card${name === winner ? " active" : ""}`;
+    card.style.setProperty("--char-accent", ch.accent);
+    card.innerHTML = `
+      <img class="character-thumb" alt="">
+      <div class="character-meta">
+        <div class="character-name">${name}</div>
+        <div class="character-type">${ch.dino}</div>
+        <div class="character-tag">${ch.tag}</div>
+      </div>
+    `;
+    setCharacterImage(card.querySelector(".character-thumb"), name);
+    wrap.appendChild(card);
+  });
+}
+
+function selectChoice(index) {
+  const choice = QUESTIONS[current].choices[index];
+  Object.entries(choice.scores).forEach(([key, value]) => { paramScores[key] = (paramScores[key] || 0) + value; });
+  Object.entries(choice.chars).forEach(([key, value]) => { charScores[key] = (charScores[key] || 0) + value; });
+  updateLiveParams();
+  current += 1;
+  if (current >= QUESTIONS.length) {
+    setTimeout(showResult, 400);
+  } else {
+    renderQ();
+  }
+}
+
+function showResult() {
+  let winner = Object.keys(CHARS)[0];
+  let max = -1;
+  Object.keys(CHARS).forEach((key) => {
+    if (charScores[key] > max) {
+      max = charScores[key];
+      winner = key;
+    }
+  });
+
+  const ch = CHARS[winner];
+  const portrait = document.getElementById("r-portrait");
+  const shell = document.getElementById("r-shell");
+  document.getElementById("r-emoji").textContent = ch.emoji;
+  shell.style.setProperty("--shell-start", ch.shellStart);
+  shell.style.setProperty("--shell-end", ch.shellEnd);
+  shell.style.setProperty("--shell-glow", ch.accent);
+  setCharacterImage(portrait, winner);
+  document.getElementById("r-name").textContent = winner;
+  document.getElementById("r-dino").textContent = ch.dino;
+  document.getElementById("r-copy").textContent = ch.copy;
+
+  const maxScore = Math.max(...PARAM_LABELS.map((key) => paramScores[key]), 0);
+  document.getElementById("r-params").innerHTML = PARAM_LABELS.map((key) => {
+    const pct = maxScore > 0 ? Math.round((paramScores[key] / maxScore) * 100) : 0;
+    return `
+      <div class="param-row">
+        <div class="param-label">${key}</div>
+        <div class="param-bar-wrap">
+          <div class="param-bar" style="width:${pct}%;background:${PARAM_COLORS[key]}"></div>
+        </div>
+        <div class="param-val">${paramScores[key]}</div>
+      </div>
+    `;
+  }).join("");
+
+  renderCharacterGallery(winner);
+  document.getElementById("cta-btn").onclick = () => window.open(LINE_URL, "_blank", "noopener");
+  show("screen-result");
+}
+
+function resetQuiz() {
+  show("screen-top");
+}
+</script>
+</body>
+</html>
